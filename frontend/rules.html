@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detection Rules | Banking Transaction Monitoring</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <aside class="app-sidebar">
+    <div class="brand-header">
+      <div class="brand-title">
+        <span>🛡️ FraudMonitor</span>
+        <span class="brand-badge">Academic</span>
+      </div>
+      <div class="brand-subtitle">Rule-Based Transaction Risk Engine</div>
+      <div class="synthetic-pill">⚠️ Synthetic Data Only</div>
+    </div>
+    <ul class="nav-links">
+      <li class="nav-item">
+        <a href="/"><span>📊</span> Overview Dashboard</a>
+      </li>
+      <li class="nav-item">
+        <a href="/transactions"><span>💳</span> Transactions</a>
+      </li>
+      <li class="nav-item">
+        <a href="/alerts"><span>🚨</span> Alerts Investigation</a>
+      </li>
+      <li class="nav-item active">
+        <a href="/rules"><span>⚖️</span> Detection Rules</a>
+      </li>
+      <li class="nav-item">
+        <a href="/customers"><span>👥</span> Customer Directory</a>
+      </li>
+    </ul>
+    <div class="sidebar-footer">
+      <div>Final Year CS Engineering Project</div>
+    </div>
+  </aside>
+
+  <div class="main-wrapper">
+    <header class="topbar">
+      <h1 class="page-title">Configurable Fraud Detection Rules</h1>
+    </header>
+
+    <main class="content-container">
+      <div style="background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; font-size: 0.875rem; color: #0369a1;">
+        <strong>Deterministic & Explainable Detection:</strong> The system utilizes 5 modular, rule-based algorithms rather than opaque black-box machine learning. Each rule awards configured risk points when its transparent criteria are met. Points combine into a prioritized risk score (0-100).
+      </div>
+
+      <div id="rules-list-container">
+        <!-- Injected via JavaScript -->
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: Edit Rule -->
+  <div id="modal-edit-rule" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title">Configure Detection Rule</h3>
+        <button class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <form id="form-edit-rule">
+        <div class="modal-body">
+          <input type="hidden" id="edit-rule-id">
+
+          <div class="form-group">
+            <label class="form-label">Rule Display Name</label>
+            <input type="text" id="edit-rule-name" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Description & Rationale</label>
+            <textarea id="edit-rule-desc" class="form-control" rows="2" required></textarea>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+            <div class="form-group">
+              <label class="form-label">Risk Points Awarded (1-100)</label>
+              <input type="number" id="edit-rule-points" class="form-control" min="1" max="100" required>
+            </div>
+            <div class="form-group" style="display:flex; flex-direction:column; justify-content:center;">
+              <label class="form-label">Rule Status</label>
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; font-size:0.875rem; margin-top:4px;">
+                <input type="checkbox" id="edit-rule-enabled" style="width: 18px; height: 18px;">
+                Enabled for Evaluation
+              </label>
+            </div>
+          </div>
+
+          <div style="border-top:1px solid var(--border-color); padding-top:14px; margin-top:14px;">
+            <h4 style="font-size:0.9rem; margin-bottom:12px; color:var(--primary-navy);">Rule Parameters</h4>
+            <div id="edit-parameters-fields">
+              <!-- Injected dynamically -->
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Configuration</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/rules.js"></script>
+</body>
+</html>

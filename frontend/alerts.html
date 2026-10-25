@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alerts Investigation | Banking Transaction Monitoring</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <aside class="app-sidebar">
+    <div class="brand-header">
+      <div class="brand-title">
+        <span>🛡️ FraudMonitor</span>
+        <span class="brand-badge">Academic</span>
+      </div>
+      <div class="brand-subtitle">Rule-Based Transaction Risk Engine</div>
+      <div class="synthetic-pill">⚠️ Synthetic Data Only</div>
+    </div>
+    <ul class="nav-links">
+      <li class="nav-item">
+        <a href="/"><span>📊</span> Overview Dashboard</a>
+      </li>
+      <li class="nav-item">
+        <a href="/transactions"><span>💳</span> Transactions</a>
+      </li>
+      <li class="nav-item active">
+        <a href="/alerts"><span>🚨</span> Alerts Investigation</a>
+      </li>
+      <li class="nav-item">
+        <a href="/rules"><span>⚖️</span> Detection Rules</a>
+      </li>
+      <li class="nav-item">
+        <a href="/customers"><span>👥</span> Customer Directory</a>
+      </li>
+    </ul>
+    <div class="sidebar-footer">
+      <div>Final Year CS Engineering Project</div>
+    </div>
+  </aside>
+
+  <div class="main-wrapper">
+    <header class="topbar">
+      <h1 class="page-title">Alert Investigation Queue</h1>
+    </header>
+
+    <main class="content-container">
+      <div class="data-card">
+        <!-- Filter Toolbar -->
+        <div class="filters-toolbar">
+          <div class="filter-group">
+            <input type="text" id="search-alerts" class="filter-input" placeholder="Search alert, txn, or customer..." style="width: 250px;">
+          </div>
+
+          <div class="filter-group">
+            <select id="filter-category" class="filter-select">
+              <option value="">All Risk Categories</option>
+              <option value="CRITICAL">Critical</option>
+              <option value="HIGH">High</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="LOW">Low</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <select id="filter-status" class="filter-select">
+              <option value="">All Statuses</option>
+              <option value="OPEN">Open</option>
+              <option value="UNDER_INVESTIGATION">Under Investigation</option>
+              <option value="RESOLVED">Resolved</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <select id="filter-score" class="filter-select">
+              <option value="">All Scores</option>
+              <option value="80">Score &ge; 80 (Critical)</option>
+              <option value="60">Score &ge; 60 (High+)</option>
+              <option value="30">Score &ge; 30 (Medium+)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Alerts Table -->
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Alert Ref</th>
+                <th>Customer / Account</th>
+                <th>Transaction Amount</th>
+                <th>Risk Score</th>
+                <th>Status</th>
+                <th>Assigned To</th>
+                <th>Triggered At</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="alerts-tbody">
+              <tr><td colspan="8" style="text-align:center; padding: 24px;">Loading alert queue...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-wrapper">
+          <div id="pagination-info">Showing 0 of 0</div>
+          <div id="pagination-controls" class="pagination-controls"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Investigation Dossier Modal -->
+  <div id="modal-alert-investigate" class="modal-overlay">
+    <div class="modal-container modal-lg">
+      <div class="modal-header">
+        <div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <h3 class="modal-title" id="modal-alert-ref">Alert Dossier</h3>
+            <span id="modal-alert-score-badge"></span>
+            <span id="modal-alert-status-badge"></span>
+          </div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+            Explainable Risk Scoring & Case Investigation File
+          </div>
+        </div>
+        <button class="modal-close" data-close-modal>&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Section A: Linked Transaction Context -->
+        <div style="background:#f8fafc; border:1px solid var(--border-color); border-radius:8px; padding:16px; margin-bottom: 20px;">
+          <h4 style="font-size:0.9rem; margin-bottom: 10px; color:var(--primary-navy);">Linked Synthetic Transaction Details</h4>
+          <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 12px; font-size:0.85rem;">
+            <div>
+              <span style="color:var(--text-muted); display:block; font-size:0.75rem;">Transaction Ref</span>
+              <strong id="invest-txn-ref">-</strong>
+            </div>
+            <div>
+              <span style="color:var(--text-muted); display:block; font-size:0.75rem;">Amount</span>
+              <strong id="invest-amount" style="color:var(--primary-navy); font-size:1.05rem;">-</strong>
+            </div>
+            <div>
+              <span style="color:var(--text-muted); display:block; font-size:0.75rem;">Type / Channel</span>
+              <span><span id="invest-type"></span> (<span id="invest-channel"></span>)</span>
+            </div>
+            <div>
+              <span style="color:var(--text-muted); display:block; font-size:0.75rem;">Timestamp</span>
+              <span id="invest-time">-</span>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; font-size:0.85rem; margin-top:10px; padding-top:10px; border-top:1px dashed var(--border-color);">
+            <div>
+              <span style="color:var(--text-muted); display:block; font-size:0.75rem;">Customer Name</span>
+              <strong id="invest-cust-name">-</strong>
+            </div>
+            <div>
+              <span style="color:var(--text-muted); display:block; font-size:0.75rem;">Customer ID</span>
+              <span id="invest-cust-ref">-</span>
+            </div>
+            <div>
+              <span style="color:var(--text-muted); display:block; font-size:0.75rem;">Account Number</span>
+              <span id="invest-account">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section B: Explainable Fraud Rule Triggers -->
+        <div style="margin-bottom: 24px;">
+          <h4 style="font-size:0.95rem; margin-bottom: 10px; color:var(--primary-navy);">
+            Deterministic Rule Triggers (Audit Trail)
+          </h4>
+          <div id="invest-triggers-list">
+            <!-- Dynamic triggers -->
+          </div>
+        </div>
+
+        <!-- Section C: Status Update Form -->
+        <div style="background:#ffffff; border:1px solid var(--border-color); border-radius:8px; padding:18px; margin-bottom: 24px;">
+          <h4 style="font-size:0.95rem; margin-bottom: 12px; color:var(--primary-navy);">Update Alert Investigation State</h4>
+          <form id="form-update-status">
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+              <div class="form-group">
+                <label class="form-label">Workflow Status</label>
+                <select id="update-status-select" class="form-control" required>
+                  <option value="OPEN">OPEN</option>
+                  <option value="UNDER_INVESTIGATION">UNDER INVESTIGATION</option>
+                  <option value="RESOLVED">RESOLVED</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Resolution Reason</label>
+                <select id="update-reason-select" class="form-control">
+                  <option value="">-- None / In Progress --</option>
+                  <option value="FALSE_POSITIVE">False Positive</option>
+                  <option value="CONFIRMED_SUSPICIOUS">Confirmed Suspicious Activity</option>
+                  <option value="CUSTOMER_VERIFIED">Customer Verified Authorized</option>
+                  <option value="ESCALATED">Escalated to Compliance</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Assigned Analyst</label>
+                <input type="text" id="update-assigned-to" class="form-control" placeholder="Analyst Name">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 10px;">
+              <label class="form-label">Status Change Note (Optional)</label>
+              <input type="text" id="update-status-note" class="form-control" placeholder="Brief rationale for status transition...">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Save Status & Log Change</button>
+          </form>
+        </div>
+
+        <!-- Section D: Case Notes & Audit Timeline -->
+        <div>
+          <h4 style="font-size:0.95rem; margin-bottom: 12px; color:var(--primary-navy);">Investigation Notes & Log</h4>
+          <div id="invest-notes-container" style="max-height: 200px; overflow-y:auto; margin-bottom: 14px;">
+            <!-- Notes -->
+          </div>
+
+          <!-- Add Note Form -->
+          <form id="form-add-note" style="background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; padding:14px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:8px;">
+              <div>
+                <label class="form-label">Analyst Name</label>
+                <input type="text" id="note-author" class="form-control" value="Risk Analyst" required>
+              </div>
+              <div>
+                <label class="form-label">Action Taken (Optional)</label>
+                <input type="text" id="note-action" class="form-control" placeholder="e.g. Card Suspended, Verified">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Investigation Note</label>
+              <textarea id="note-text" class="form-control" rows="2" placeholder="Record investigation observations, customer outreach, or risk rationale..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-secondary btn-sm">Add Note</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal>Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/alerts.js"></script>
+</body>
+</html>

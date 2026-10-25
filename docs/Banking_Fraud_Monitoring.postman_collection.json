@@ -1,0 +1,235 @@
+{
+  "info": {
+    "name": "Banking Fraud Monitoring & Risk Analysis API",
+    "description": "Postman collection for Rule-Based Banking Transaction Monitoring System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "System Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/health",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "health"]
+        }
+      }
+    },
+    {
+      "name": "Dashboard Analytics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/analytics/dashboard?days=30",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "analytics", "dashboard"],
+          "query": [{ "key": "days", "value": "30" }]
+        }
+      }
+    },
+    {
+      "name": "List Transactions",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/transactions?page=1&page_size=20",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "transactions"],
+          "query": [
+            { "key": "page", "value": "1" },
+            { "key": "page_size", "value": "20" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Transaction Details",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/transactions/1",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "transactions", "1"]
+        }
+      }
+    },
+    {
+      "name": "Create Transaction",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"account_id\": 1,\n  \"amount\": 14500.00,\n  \"currency\": \"USD\",\n  \"transaction_type\": \"TRANSFER\",\n  \"channel\": \"ONLINE\",\n  \"timestamp\": \"2026-10-24T03:15:00\",\n  \"location_city\": \"New York\",\n  \"location_country\": \"USA\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/transactions",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "transactions"]
+        }
+      }
+    },
+    {
+      "name": "Evaluate Single Transaction",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/transactions/1/evaluate?force_reevaluate=true",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "transactions", "1", "evaluate"],
+          "query": [{ "key": "force_reevaluate", "value": "true" }]
+        }
+      }
+    },
+    {
+      "name": "Batch Evaluate Transactions",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/transactions/evaluate-batch?only_unevaluated=true&limit=500",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "transactions", "evaluate-batch"],
+          "query": [
+            { "key": "only_unevaluated", "value": "true" },
+            { "key": "limit", "value": "500" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "List Alerts Queue",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/alerts?page=1&page_size=20",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "alerts"],
+          "query": [
+            { "key": "page", "value": "1" },
+            { "key": "page_size", "value": "20" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Alert Dossier",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/alerts/1",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "alerts", "1"]
+        }
+      }
+    },
+    {
+      "name": "Update Alert Status",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"UNDER_INVESTIGATION\",\n  \"assigned_to\": \"Compliance Officer\",\n  \"note\": \"Transaction review initiated.\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/alerts/1/status",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "alerts", "1", "status"]
+        }
+      }
+    },
+    {
+      "name": "Add Investigation Note",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"author\": \"Risk Analyst\",\n  \"note_text\": \"Cardholder contacted; confirmed transaction authorized for business travel.\",\n  \"action_taken\": \"Customer Verified\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/alerts/1/notes",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "alerts", "1", "notes"]
+        }
+      }
+    },
+    {
+      "name": "List Fraud Rules",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/rules",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "rules"]
+        }
+      }
+    },
+    {
+      "name": "Update Rule Configuration",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"risk_points\": 40,\n  \"is_enabled\": true,\n  \"parameters_json\": {\n    \"threshold\": 12000.0\n  }\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/rules/1",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "rules", "1"]
+        }
+      }
+    },
+    {
+      "name": "List Customers",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/customers",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "customers"]
+        }
+      }
+    }
+  ]
+}
