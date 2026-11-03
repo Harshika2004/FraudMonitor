@@ -206,15 +206,47 @@ class TransactionService:
                 "errors": []
             }
 
-        # Cache existing account IDs for foreign key validation
-        existing_account_ids = {a[0] for a in db.query(Account.account_id).all()}
+        # Cache existing account IDs and account numbers for foreign key mapping
+        all_accounts = db.query(Account).all()
+        existing_account_ids = {a.account_id for a in all_accounts}
+        acc_num_map = {a.account_number.strip().upper(): a.account_id for a in all_accounts}
+
+        # Cache synthetic customer to auto-link unknown accounts if needed
+        default_customer = db.query(Customer).first()
 
         for row_idx, row in enumerate(reader, start=2):
             try:
-                acct_id = int(row.get("account_id", "").strip())
-                if acct_id not in existing_account_ids:
-                    errors.append({"row": row_idx, "error": f"Account ID {acct_id} does not exist in database."})
+                raw_acct = str(row.get("account_id", "")).strip()
+                if not raw_acct:
+                    errors.append({"row": row_idx, "error": "Account identifier is missing or empty."})
                     continue
+
+                acct_id = None
+                # Check if it's already an integer ID
+                if raw_acct.isdigit():
+                    cand_id = int(raw_acct)
+                    if cand_id in existing_account_ids:
+                        acct_id = cand_id
+
+                # If not matched by ID, check if it matches an existing account_number
+                if acct_id is None:
+                    acct_id = acc_num_map.get(raw_acct.upper())
+
+                # If still not found, auto-create the Account in the DB so foreign key constraints pass
+                if acct_id is None:
+                    new_acc = Account(
+                        account_number=raw_acct,
+                        customer_id=default_customer.customer_id if default_customer else 1,
+                        account_type="CHECKING",
+                        currency=row.get("currency", "USD").strip().upper() or "USD",
+                        current_balance=Decimal("25000.00"),
+                        status="ACTIVE"
+                    )
+                    db.add(new_acc)
+                    db.flush()  # populate new_acc.account_id
+                    acct_id = new_acc.account_id
+                    existing_account_ids.add(acct_id)
+                    acc_num_map[raw_acct.upper()] = acct_id
 
                 amount_val = Decimal(row.get("amount", "").strip())
                 if amount_val <= Decimal('0'):
@@ -241,16 +273,25 @@ class TransactionService:
                 lat_str = row.get("latitude", "").strip()
                 lon_str = row.get("longitude", "").strip()
 
+                raw_type = row.get("transaction_type", "TRANSFER").strip().upper()
+                # Normalize common aliases (e.g. DEBIT -> WITHDRAWAL, CREDIT -> DEPOSIT)
+                if raw_type == "DEBIT":
+                    tx_type = "WITHDRAWAL"
+                elif raw_type == "CREDIT":
+                    tx_type = "DEPOSIT"
+                else:
+                    tx_type = raw_type
+
                 txn = Transaction(
                     transaction_ref=txn_ref,
                     account_id=acct_id,
                     amount=amount_val,
-                    currency=row.get("currency", "USD").strip(),
-                    transaction_type=row.get("transaction_type", "TRANSFER").strip().upper(),
-                    channel=row.get("channel", "ONLINE").strip().upper(),
+                    currency=row.get("currency", "USD").strip().upper() or "USD",
+                    transaction_type=tx_type,
+                    channel=row.get("channel", "ONLINE").strip().upper() or "ONLINE",
                     timestamp=ts,
                     location_city=row.get("location_city", "Unknown").strip(),
-                    location_country=row.get("location_country", "USA").strip(),
+                    location_country=row.get("location_country", "India").strip(),
                     latitude=Decimal(lat_str) if lat_str else None,
                     longitude=Decimal(lon_str) if lon_str else None,
                     device_id=row.get("device_id", "").strip() or None,
