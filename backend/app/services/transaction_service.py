@@ -369,14 +369,17 @@ class TransactionService:
     def batch_evaluate(
         db: Session,
         only_unevaluated: bool = True,
-        limit: int = 500
+        limit: Optional[int] = None
     ) -> Dict[str, Any]:
         """Runs the rule engine over a batch of eligible transactions."""
         query = db.query(Transaction)
         if only_unevaluated:
             query = query.filter(Transaction.is_evaluated == False)
         
-        query = query.order_by(Transaction.timestamp.asc()).limit(limit)
+        query = query.order_by(Transaction.timestamp.asc())
+        if limit:
+            query = query.limit(limit)
+
         txns = query.all()
 
         evaluated_count = 0

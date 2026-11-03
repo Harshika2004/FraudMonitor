@@ -108,8 +108,21 @@ const Formatters = {
     if (amount === null || amount === undefined) return '$0.00';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currency || 'USD'
+      currency: currency || 'USD',
+      maximumFractionDigits: 2
     }).format(amount);
+  },
+
+  compactCurrency(amount, currency = 'USD') {
+    if (amount === null || amount === undefined) return '$0.00';
+    const abs = Math.abs(amount);
+    if (abs >= 1_000_000_000) {
+      return (amount < 0 ? '-' : '') + '$' + (abs / 1_000_000_000).toFixed(2) + 'B';
+    }
+    if (abs >= 1_000_000) {
+      return (amount < 0 ? '-' : '') + '$' + (abs / 1_000_000).toFixed(2) + 'M';
+    }
+    return this.currency(amount, currency);
   },
 
   dateTime(isoString) {

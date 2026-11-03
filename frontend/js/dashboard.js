@@ -46,8 +46,23 @@ function renderKPICards(kpi) {
   document.getElementById('kpi-flag-rate').textContent = `${kpi.flag_rate_percentage}% Flag Rate`;
   document.getElementById('kpi-open-alerts').textContent = kpi.open_alerts.toLocaleString();
   document.getElementById('kpi-high-critical').textContent = kpi.high_critical_alerts.toLocaleString();
-  document.getElementById('kpi-monitored-vol').textContent = Formatters.currency(kpi.total_monitored_volume);
-  document.getElementById('kpi-flagged-vol').textContent = `${Formatters.currency(kpi.flagged_volume)} Flagged`;
+
+  const monitoredEl = document.getElementById('kpi-monitored-vol');
+  if (monitoredEl) {
+    const fullVol = Formatters.currency(kpi.total_monitored_volume);
+    const compactVol = Formatters.compactCurrency(kpi.total_monitored_volume);
+    // Display compact notation if large (e.g. $97.84M) and show exact full amount on hover
+    monitoredEl.textContent = kpi.total_monitored_volume >= 1_000_000 ? compactVol : fullVol;
+    monitoredEl.title = `Full amount: ${fullVol}`;
+  }
+
+  const flaggedEl = document.getElementById('kpi-flagged-vol');
+  if (flaggedEl) {
+    const fullFlagged = Formatters.currency(kpi.flagged_volume);
+    const compactFlagged = Formatters.compactCurrency(kpi.flagged_volume);
+    flaggedEl.textContent = `${kpi.flagged_volume >= 1_000_000 ? compactFlagged : fullFlagged} Flagged`;
+    flaggedEl.title = `Full flagged amount: ${fullFlagged}`;
+  }
 }
 
 function renderTrendsChart(dailyTrends) {
@@ -233,11 +248,11 @@ async function runBatchEvaluation() {
   const btn = document.getElementById('btn-batch-eval');
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Evaluating...';
+    btn.textContent = 'Evaluating all...';
   }
 
   try {
-    const res = await ApiClient.post('/transactions/evaluate-batch?only_unevaluated=false&limit=1000', {});
+    const res = await ApiClient.post('/transactions/evaluate-batch?only_unevaluated=false', {});
     ApiClient.showToast(res.message, 'success');
     await loadDashboardData();
     await loadRecentAlerts();

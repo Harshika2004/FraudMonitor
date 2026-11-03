@@ -163,7 +163,7 @@ def evaluate_single_transaction(
 @router.post("/evaluate-batch", response_model=BatchEvaluationResponse)
 def evaluate_batch(
     only_unevaluated: bool = Query(True, description="Only evaluate uninspected transactions"),
-    limit: int = Query(500, ge=1, le=2000, description="Maximum transactions to evaluate in batch"),
+    limit: Optional[int] = Query(None, ge=1, description="Maximum transactions to evaluate in batch (omit or null to evaluate all)"),
     db: Session = Depends(get_db)
 ):
     """Batch-evaluates transactions against all enabled detection rules."""

@@ -208,11 +208,11 @@ async function evaluateUnevaluated() {
   const btn = document.getElementById('btn-eval-unevaluated');
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Evaluating...';
+    btn.textContent = 'Evaluating all...';
   }
 
   try {
-    const res = await ApiClient.post('/transactions/evaluate-batch?only_unevaluated=true&limit=500', {});
+    const res = await ApiClient.post('/transactions/evaluate-batch?only_unevaluated=true', {});
     ApiClient.showToast(res.message, 'success');
     loadTransactions(1);
   } catch (err) {
