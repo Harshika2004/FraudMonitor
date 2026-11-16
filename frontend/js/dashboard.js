@@ -17,18 +17,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const daysFilter = document.getElementById('filter-days');
   if (daysFilter) {
-    daysFilter.addEventListener('change', () => loadDashboardData(parseInt(daysFilter.value) || 30));
+    daysFilter.addEventListener('change', () => {
+      const val = parseInt(daysFilter.value);
+      loadDashboardData(isNaN(val) ? 0 : val);
+    });
   }
 });
 
 async function initDashboard() {
-  await loadDashboardData(30);
+  const daysFilter = document.getElementById('filter-days');
+  if (daysFilter) daysFilter.value = '0';
+  await loadDashboardData(0);
   await loadRecentAlerts();
 }
 
-async function loadDashboardData(days = 30) {
+async function loadDashboardData(days = 0) {
   try {
-    const data = await ApiClient.get('/analytics/dashboard', { days });
+    const params = { days };
+    const dsId = sessionStorage.getItem('sessionDatasetId');
+    if (dsId) params.dataset_id = parseInt(dsId);
+    const data = await ApiClient.get('/analytics/dashboard', params);
     renderKPICards(data.kpi);
     renderTrendsChart(data.daily_trends);
     renderRiskDistChart(data.risk_distribution);
@@ -220,7 +228,10 @@ async function loadRecentAlerts() {
   if (!tbody) return;
 
   try {
-    const data = await ApiClient.get('/alerts', { page: 1, page_size: 6, sort_by: 'created_at', sort_order: 'desc' });
+    const params = { page: 1, page_size: 6, sort_by: 'created_at', sort_order: 'desc' };
+    const dsId = sessionStorage.getItem('sessionDatasetId');
+    if (dsId) params.dataset_id = parseInt(dsId);
+    const data = await ApiClient.get('/alerts', params);
     if (!data.items || data.items.length === 0) {
       tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 24px; color: var(--text-muted);">No suspicious transactions flagged yet. Run batch evaluation to analyze transactions.</td></tr>`;
       return;
@@ -229,7 +240,7 @@ async function loadRecentAlerts() {
     tbody.innerHTML = data.items.map(alert => `
       <tr>
         <td><strong>${alert.alert_ref}</strong></td>
-        <td>${alert.customer_name || 'Synthetic Customer'}</td>
+        <td>${alert.customer_name || 'Not provided'}</td>
         <td><strong>${Formatters.currency(alert.amount, alert.currency)}</strong></td>
         <td>${Formatters.riskBadge(alert.risk_category, alert.risk_score)}</td>
         <td>${Formatters.statusBadge(alert.status)}</td>

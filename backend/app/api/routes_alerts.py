@@ -27,6 +27,7 @@ def list_alerts(
     search: Optional[str] = Query(None, description="Search alert ref, transaction, or customer"),
     sort_by: str = Query("created_at", description="Sort by created_at, risk_score, or amount"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="Sort direction"),
+    dataset_id: Optional[int] = Query(None, description="Dataset ID to filter"),
     db: Session = Depends(get_db)
 ):
     """Retrieve filtered, sorted, paginated alert investigation queue."""
@@ -41,7 +42,8 @@ def list_alerts(
         end_date=end_date,
         search=search,
         sort_by=sort_by,
-        sort_order=sort_order
+        sort_order=sort_order,
+        dataset_id=dataset_id
     )
     return {
         "total": total,

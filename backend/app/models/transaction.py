@@ -6,6 +6,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     transaction_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    dataset_id = Column(Integer, ForeignKey("datasets.dataset_id", ondelete="CASCADE"), nullable=True, index=True)
     transaction_ref = Column(String(50), unique=True, nullable=False, index=True)
     account_id = Column(Integer, ForeignKey("accounts.account_id", ondelete="CASCADE"), nullable=False, index=True)
     amount = Column(Numeric(15, 2), nullable=False, index=True)
@@ -26,7 +27,16 @@ class Transaction(Base):
     evaluated_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=func.now())
 
+    # Dataset-scoped customer/account metadata from uploaded CSV
+    account_ref = Column(String(50), nullable=True, index=True)
+    customer_ref = Column(String(50), nullable=True, index=True)
+    customer_name = Column(String(100), nullable=True)
+    email = Column(String(100), nullable=True)
+    customer_category = Column(String(100), nullable=True)
+    account_balance = Column(Numeric(15, 2), nullable=True)
+
     account = relationship("Account", back_populates="transactions")
+    dataset = relationship("Dataset", back_populates="transactions")
     alert = relationship("Alert", back_populates="transaction", uselist=False, cascade="all, delete-orphan")
 
     def __repr__(self):

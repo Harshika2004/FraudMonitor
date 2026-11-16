@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, asc
 from backend.app.models.alert import Alert, AlertRuleTrigger
+from backend.app.models.dataset import Dataset
 from backend.app.models.transaction import Transaction
 from backend.app.models.account import Account
 from backend.app.models.customer import Customer
@@ -11,6 +12,9 @@ from backend.app.models.investigation_note import InvestigationNote
 from backend.app.schemas.alert import AlertStatusUpdate, InvestigationNoteCreate
 
 logger = logging.getLogger(__name__)
+
+def _is_valid(val):
+    return val is not None and not hasattr(val, "default") and not type(val).__name__ in ("Query", "Param", "Depends")
 
 class AlertService:
 
@@ -26,9 +30,15 @@ class AlertService:
         min_score: Optional[int] = None,
         search: Optional[str] = None,
         sort_by: str = "created_at",
-        sort_order: str = "desc"
+        sort_order: str = "desc",
+        dataset_id: Optional[int] = None
     ) -> Tuple[int, List[Dict[str, Any]]]:
         """Query alerts with filtering, sorting, and linked transaction context."""
+        if dataset_id is None:
+            active_ds = db.query(Dataset).filter(Dataset.is_active == True).first()
+            if active_ds:
+                dataset_id = active_ds.dataset_id
+
         query = (
             db.query(
                 Alert,
@@ -42,31 +52,37 @@ class AlertService:
                 Account.account_number,
                 Customer.customer_ref,
                 Customer.first_name,
-                Customer.last_name
+                Customer.last_name,
+                Transaction.customer_ref,
+                Transaction.customer_name
             )
             .join(Transaction, Alert.transaction_id == Transaction.transaction_id)
             .join(Account, Transaction.account_id == Account.account_id)
-            .join(Customer, Account.customer_id == Customer.customer_id)
+            .outerjoin(Customer, Account.customer_id == Customer.customer_id)
         )
 
-        if risk_category:
+        if dataset_id is not None and dataset_id > 0:
+            query = query.filter(Transaction.dataset_id == dataset_id)
+
+        if _is_valid(risk_category):
             query = query.filter(Alert.risk_category == risk_category)
-        if status:
+        if _is_valid(status):
             query = query.filter(Alert.status == status)
-        if min_score is not None:
+        if _is_valid(min_score):
             query = query.filter(Alert.risk_score >= min_score)
-        if start_date:
+        if _is_valid(start_date):
             query = query.filter(Alert.created_at >= start_date)
-        if end_date:
+        if _is_valid(end_date):
             query = query.filter(Alert.created_at <= end_date)
-        if search:
+        if _is_valid(search):
             search_pat = f"%{search}%"
             query = query.filter(
                 (Alert.alert_ref.like(search_pat)) |
                 (Transaction.transaction_ref.like(search_pat)) |
                 (Account.account_number.like(search_pat)) |
                 (Customer.first_name.like(search_pat)) |
-                (Customer.last_name.like(search_pat))
+                (Customer.last_name.like(search_pat)) |
+                (Transaction.customer_name.like(search_pat))
             )
 
         total = query.count()
@@ -86,6 +102,13 @@ class AlertService:
         items = []
         for row in results:
             alt = row[0]
+            cust_ref = row[9] or row[12] or "Not provided"
+            cust_name = row[13]
+            if not cust_name:
+                cust_name = f"{row[10] or ''} {row[11] or ''}".strip()
+            if not cust_name:
+                cust_name = "Not provided"
+
             items.append({
                 "alert_id": alt.alert_id,
                 "alert_ref": alt.alert_ref,
@@ -105,8 +128,8 @@ class AlertService:
                 "transaction_timestamp": row[6],
                 "location_city": row[7],
                 "account_number": row[8],
-                "customer_ref": row[9],
-                "customer_name": f"{row[10]} {row[11]}"
+                "customer_ref": cust_ref,
+                "customer_name": cust_name
             })
 
         return total, items
@@ -123,7 +146,7 @@ class AlertService:
             )
             .join(Transaction, Alert.transaction_id == Transaction.transaction_id)
             .join(Account, Transaction.account_id == Account.account_id)
-            .join(Customer, Account.customer_id == Customer.customer_id)
+            .outerjoin(Customer, Account.customer_id == Customer.customer_id)
             .filter(Alert.alert_id == alert_id)
             .first()
         )
@@ -146,6 +169,13 @@ class AlertService:
             .all()
         )
 
+        cust_ref = (cust.customer_ref if cust else None) or acct.customer_ref or txn.customer_ref or "Not provided"
+        cust_name = None
+        if cust:
+            cust_name = f"{cust.first_name} {cust.last_name}".strip()
+        if not cust_name:
+            cust_name = acct.customer_name or txn.customer_name or "Not provided"
+
         return {
             "alert_id": alt.alert_id,
             "alert_ref": alt.alert_ref,
@@ -165,8 +195,8 @@ class AlertService:
             "transaction_timestamp": txn.timestamp,
             "location_city": txn.location_city,
             "account_number": acct.account_number,
-            "customer_ref": cust.customer_ref,
-            "customer_name": f"{cust.first_name} {cust.last_name}",
+            "customer_ref": cust_ref,
+            "customer_name": cust_name,
             "triggers": triggers,
             "notes": notes
         }

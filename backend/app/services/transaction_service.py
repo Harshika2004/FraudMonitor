@@ -6,6 +6,7 @@ from datetime import datetime
 from decimal import Decimal
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, asc, func
+from backend.app.models.dataset import Dataset
 from backend.app.models.transaction import Transaction
 from backend.app.models.account import Account
 from backend.app.models.customer import Customer
@@ -14,6 +15,9 @@ from backend.app.rules.engine import rule_engine
 from backend.app.schemas.transaction import TransactionCreate
 
 logger = logging.getLogger(__name__)
+
+def _is_valid(val):
+    return val is not None and not hasattr(val, "default") and not type(val).__name__ in ("Query", "Param", "Depends")
 
 class TransactionService:
 
@@ -33,9 +37,15 @@ class TransactionService:
         risk_category: Optional[str] = None,
         search: Optional[str] = None,
         sort_by: str = "timestamp",
-        sort_order: str = "desc"
+        sort_order: str = "desc",
+        dataset_id: Optional[int] = None
     ) -> Tuple[int, List[Dict[str, Any]]]:
         """Query transactions with comprehensive filtering, sorting, and pagination."""
+        if dataset_id is None:
+            active_ds = db.query(Dataset).filter(Dataset.is_active == True).first()
+            if active_ds:
+                dataset_id = active_ds.dataset_id
+
         query = (
             db.query(
                 Transaction,
@@ -47,35 +57,39 @@ class TransactionService:
                 Alert.alert_id
             )
             .join(Account, Transaction.account_id == Account.account_id)
-            .join(Customer, Account.customer_id == Customer.customer_id)
+            .outerjoin(Customer, Account.customer_id == Customer.customer_id)
             .outerjoin(Alert, Transaction.transaction_id == Alert.transaction_id)
         )
 
-        if account_id:
+        if dataset_id is not None and dataset_id > 0:
+            query = query.filter(Transaction.dataset_id == dataset_id)
+
+        if _is_valid(account_id):
             query = query.filter(Transaction.account_id == account_id)
-        if transaction_type:
+        if _is_valid(transaction_type):
             query = query.filter(Transaction.transaction_type == transaction_type)
-        if channel:
+        if _is_valid(channel):
             query = query.filter(Transaction.channel == channel)
-        if min_amount is not None:
+        if _is_valid(min_amount):
             query = query.filter(Transaction.amount >= min_amount)
-        if max_amount is not None:
+        if _is_valid(max_amount):
             query = query.filter(Transaction.amount <= max_amount)
-        if start_date:
+        if _is_valid(start_date):
             query = query.filter(Transaction.timestamp >= start_date)
-        if end_date:
+        if _is_valid(end_date):
             query = query.filter(Transaction.timestamp <= end_date)
-        if is_evaluated is not None:
+        if _is_valid(is_evaluated):
             query = query.filter(Transaction.is_evaluated == is_evaluated)
-        if risk_category:
+        if _is_valid(risk_category):
             query = query.filter(Alert.risk_category == risk_category)
-        if search:
+        if _is_valid(search):
             search_pat = f"%{search}%"
             query = query.filter(
                 (Transaction.transaction_ref.like(search_pat)) |
                 (Account.account_number.like(search_pat)) |
                 (Customer.first_name.like(search_pat)) |
                 (Customer.last_name.like(search_pat)) |
+                (Transaction.customer_name.like(search_pat)) |
                 (Transaction.location_city.like(search_pat))
             )
 
@@ -95,6 +109,12 @@ class TransactionService:
         items = []
         for row in results:
             txn = row[0]
+            cust_name = txn.customer_name
+            if not cust_name:
+                cust_name = f"{row[2] or ''} {row[3] or ''}".strip()
+            if not cust_name:
+                cust_name = "Not provided"
+
             item = {
                 "transaction_id": txn.transaction_id,
                 "transaction_ref": txn.transaction_ref,
@@ -117,7 +137,7 @@ class TransactionService:
                 "evaluated_at": txn.evaluated_at,
                 "created_at": txn.created_at,
                 "account_number": row[1],
-                "customer_name": f"{row[2]} {row[3]}",
+                "customer_name": cust_name,
                 "has_alert": row[6] is not None,
                 "alert_risk_category": row[4],
                 "alert_risk_score": row[5]
@@ -137,7 +157,7 @@ class TransactionService:
                 Alert
             )
             .join(Account, Transaction.account_id == Account.account_id)
-            .join(Customer, Account.customer_id == Customer.customer_id)
+            .outerjoin(Customer, Account.customer_id == Customer.customer_id)
             .outerjoin(Alert, Transaction.transaction_id == Alert.transaction_id)
             .filter(Transaction.transaction_id == transaction_id)
             .first()
@@ -264,11 +284,11 @@ class TransactionService:
                 if not txn_ref:
                     txn_ref = f"CSV-{ts.strftime('%Y%m%d%H%M%S')}-{row_idx}"
 
-                # Check unique ref
+                # Ensure uniqueness — append short UUID suffix if collision detected
                 existing = db.query(Transaction).filter(Transaction.transaction_ref == txn_ref).first()
                 if existing:
-                    errors.append({"row": row_idx, "error": f"Transaction reference '{txn_ref}' already exists."})
-                    continue
+                    import uuid as _uuid
+                    txn_ref = f"{txn_ref[:40]}-{_uuid.uuid4().hex[:8]}"
 
                 lat_str = row.get("latitude", "").strip()
                 lon_str = row.get("longitude", "").strip()
@@ -369,43 +389,36 @@ class TransactionService:
     def batch_evaluate(
         db: Session,
         only_unevaluated: bool = True,
-        limit: Optional[int] = None
+        limit: Optional[int] = None,
+        dataset_id: Optional[int] = None
     ) -> Dict[str, Any]:
-        """Runs the rule engine over a batch of eligible transactions."""
+        """Runs the rule engine over a batch of eligible transactions scoped to the active dataset."""
+        # Auto-resolve active dataset if not provided
+        if dataset_id is None:
+            active_ds = db.query(Dataset).filter(Dataset.is_active == True).first()
+            if active_ds:
+                dataset_id = active_ds.dataset_id
+
         query = db.query(Transaction)
+        if dataset_id is not None:
+            query = query.filter(Transaction.dataset_id == dataset_id)
         if only_unevaluated:
             query = query.filter(Transaction.is_evaluated == False)
-        
+
         query = query.order_by(Transaction.timestamp.asc())
-        if limit:
+        if limit is not None and limit > 0:
             query = query.limit(limit)
 
         txns = query.all()
-
-        evaluated_count = 0
-        flagged_count = 0
-        alerts_created = 0
-        cat_counts = {"LOW": 0, "MEDIUM": 0, "HIGH": 0, "CRITICAL": 0}
-
-        for txn in txns:
-            score, category, results, alert = rule_engine.evaluate_transaction(
-                transaction=txn,
-                db=db,
-                force_reevaluate=not only_unevaluated
-            )
-            evaluated_count += 1
-            cat_counts[category] = cat_counts.get(category, 0) + 1
-            if alert:
-                flagged_count += 1
-                alerts_created += 1
+        res = rule_engine.evaluate_batch(db=db, transactions=txns, force_reevaluate=not only_unevaluated)
 
         return {
-            "evaluated_count": evaluated_count,
-            "flagged_count": flagged_count,
-            "alerts_created": alerts_created,
-            "critical_count": cat_counts.get("CRITICAL", 0),
-            "high_count": cat_counts.get("HIGH", 0),
-            "medium_count": cat_counts.get("MEDIUM", 0),
-            "low_count": cat_counts.get("LOW", 0),
-            "message": f"Successfully evaluated {evaluated_count} transactions. Flagged {flagged_count} suspicious items."
+            "evaluated_count": res["evaluated_count"],
+            "flagged_count": res["flagged_count"],
+            "alerts_created": res["alerts_created"],
+            "critical_count": res["critical_count"],
+            "high_count": res["high_count"],
+            "medium_count": res["medium_count"],
+            "low_count": res["low_count"],
+            "message": res["message"]
         }

@@ -15,8 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('filter-status')?.addEventListener('change', () => loadTransactions(1));
   document.getElementById('filter-risk')?.addEventListener('change', () => loadTransactions(1));
 
-  // CSV Modal bindings
-  document.getElementById('btn-open-csv')?.addEventListener('click', openCsvModal);
+  // CSV Workflow bindings - routes directly to the dedicated Landing & Validation Flow
+  document.getElementById('btn-open-csv')?.addEventListener('click', () => {
+    window.location.href = '/?upload=1';
+  });
   document.getElementById('btn-close-csv')?.addEventListener('click', closeCsvModal);
   document.getElementById('form-csv-upload')?.addEventListener('submit', handleCsvUpload);
 
@@ -58,6 +60,9 @@ async function loadTransactions(page = 1) {
     sort_order: 'desc'
   };
 
+  const datasetId = sessionStorage.getItem('sessionDatasetId');
+  if (datasetId) params.dataset_id = parseInt(datasetId);
+
   try {
     const data = await ApiClient.get('/transactions', params);
     renderTable(data.items);
@@ -85,7 +90,7 @@ function renderTable(items) {
       <tr>
         <td><strong>${tx.transaction_ref}</strong></td>
         <td>${tx.account_number || 'ACCT-' + tx.account_id}</td>
-        <td>${tx.customer_name || 'Synthetic Customer'}</td>
+        <td>${tx.customer_name || 'Not provided'}</td>
         <td><strong>${Formatters.currency(tx.amount, tx.currency)}</strong></td>
         <td><span style="font-size: 0.8rem; font-weight:600; color: #475569;">${tx.transaction_type}</span></td>
         <td>${tx.channel}</td>
@@ -136,10 +141,10 @@ async function viewTransactionDetails(txId) {
     document.getElementById('detail-ip').textContent = tx.ip_address || 'Documentation RFC IP';
     document.getElementById('detail-device').textContent = tx.device_id || 'N/A';
 
-    document.getElementById('detail-customer-name').textContent = cust.name;
-    document.getElementById('detail-customer-ref').textContent = cust.customer_ref;
+    document.getElementById('detail-customer-name').textContent = cust ? cust.name : 'Not provided';
+    document.getElementById('detail-customer-ref').textContent = cust ? cust.customer_ref : 'Not provided';
     document.getElementById('detail-account-num').textContent = acct.account_number;
-    document.getElementById('detail-account-bal').textContent = Formatters.currency(acct.current_balance);
+    document.getElementById('detail-account-bal').textContent = (acct.current_balance !== null && acct.current_balance !== undefined) ? Formatters.currency(acct.current_balance) : 'N/A';
 
     const alertBanner = document.getElementById('detail-alert-status');
     if (alert) {

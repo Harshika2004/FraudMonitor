@@ -1,168 +1,309 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Overview Dashboard | Banking Transaction Monitoring</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=2">
-  <!-- Chart.js for data visualization -->
+  <title>Banking Transaction Monitoring &amp; Fraud Risk Analysis</title>
+  <link rel="stylesheet" href="/static/css/style.css?v=7">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body>
-  <!-- Sidebar Navigation -->
-  <aside class="app-sidebar">
+
+  <!-- =====================================================================
+       Workflow Views (Upload Landing + Preview/Validate)
+  ===================================================================== -->
+  <div id="workflow-wrapper" class="workflow-wrapper" style="display: flex;">
+    <!-- Clean Workspace Header (no numbered stepper) -->
+    <header class="workflow-topbar">
+      <div class="workflow-brand">
+        <span style="font-size:1.5rem;">&#x1F6E1;&#xFE0F;</span>
+        <div>
+          <div class="workflow-brand-title">FraudMonitor Enterprise</div>
+          <div style="font-size:0.75rem; color:var(--text-light);">Rule-Based Banking Risk Engine</div>
+        </div>
+      </div>
+      <div class="workflow-feature-labels">
+        <span class="feature-label"><span>&#x1F4E5;</span> CSV Import</span>
+        <span class="feature-label"><span>&#x2705;</span> Data Validation</span>
+        <span class="feature-label"><span>&#x2696;&#xFE0F;</span> Risk Assessment</span>
+      </div>
+    </header>
+
+    <div class="workflow-content">
+
+      <!-- ================================================================
+           STEP 1: Upload Landing Page
+      ================================================================ -->
+      <section id="step-landing">
+        <div class="landing-hero">
+          <h1 class="landing-title">Transaction Analysis Workspace</h1>
+          <p class="landing-subtitle">
+            Upload your banking transaction data to begin fraud risk assessment.
+          </p>
+        </div>
+
+        <input type="file" id="csv-file-input" accept=".csv" style="display:none;">
+
+        <div class="drop-zone" id="drop-zone">
+          <div class="drop-zone-icon">&#x1F4E5;</div>
+          <div class="drop-zone-text-main" id="drop-zone-status-text">Drag &amp; drop transaction CSV here</div>
+          <div class="drop-zone-text-sub">Supports comma-separated transaction exports up to 50MB</div>
+          <div class="drop-zone-btn-wrap">
+            <button type="button" id="btn-browse-file" class="btn btn-primary">
+              <span>&#x1F4C1;</span> Browse Files
+            </button>
+          </div>
+        </div>
+
+        <div class="schema-info-card">
+          <div class="schema-info-header">
+            <div class="schema-info-title">
+              <span>&#x1F4CB;</span> Supported CSV Schema &amp; Required Data Format
+            </div>
+            <span class="brand-badge" style="background:#e0f2fe; color:var(--accent-blue);">CSV RFC 4180</span>
+          </div>
+          <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">
+            Required Columns (Automatic synonym recognition enabled):
+          </div>
+          <div class="schema-tags">
+            <span class="schema-tag required">account_id *</span>
+            <span class="schema-tag required">amount *</span>
+            <span class="schema-tag required">transaction_type *</span>
+            <span class="schema-tag required">timestamp *</span>
+            <span class="schema-tag required">location_city *</span>
+          </div>
+          <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px; margin-top:14px;">
+            Optional Enrichment Columns:
+          </div>
+          <div class="schema-tags">
+            <span class="schema-tag">currency</span>
+            <span class="schema-tag">channel</span>
+            <span class="schema-tag">transaction_ref</span>
+            <span class="schema-tag">location_country</span>
+            <span class="schema-tag">latitude</span>
+            <span class="schema-tag">longitude</span>
+            <span class="schema-tag">device_id</span>
+            <span class="schema-tag">ip_address</span>
+            <span class="schema-tag">merchant_name</span>
+            <span class="schema-tag">merchant_category</span>
+          </div>
+          <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px; margin-top:14px;">
+            Optional Customer Columns <span style="font-weight:400; font-style:italic;">(displayed in Customer / Account Directory)</span>:
+          </div>
+          <div class="schema-tags">
+            <span class="schema-tag" title="Person making the transaction (aliases: name, full_name, client_name)">customer_name</span>
+            <span class="schema-tag" title="Customer's email address (aliases: email, customer_email, customer_mail)">customer_email</span>
+            <span class="schema-tag" title="Customer classification e.g. Standard, Premium (aliases: customer_type, client_category)">customer_category</span>
+          </div>
+          <div class="schema-note" style="margin-top:10px; font-size:0.8rem; color:var(--text-muted);">
+            💡 <strong>Note:</strong> <code>merchant_name</code> / <code>merchant_category</code> identify the <em>business where the transaction occurred</em>. <code>customer_name</code> / <code>customer_email</code> / <code>customer_category</code> identify the <em>person who made the transaction</em> — these are separate fields.
+          </div>
+          <div class="schema-note">
+            &#x1F4A1; <strong>Upload Instructions:</strong> Transaction amounts must be numeric (e.g. <code>1250.50</code>). Timestamps can be ISO format (e.g. <code>2026-11-01 14:30:00</code>). The engine automatically handles account mapping and transaction type normalisation.
+          </div>
+        </div>
+
+        <div id="previous-datasets-container" class="previous-datasets-card" style="display:none;">
+          <div style="font-size:0.9rem; font-weight:700; color:var(--primary-navy); margin-bottom:12px;">
+            Previously Analysed Datasets — Continue with Existing Analysis:
+          </div>
+          <div id="previous-datasets-list" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           STEP 2: Preview &amp; Validate
+      ================================================================ -->
+      <section id="step-preview" style="display:none;">
+        <div style="margin-bottom:20px;">
+          <h2 style="font-size:1.4rem; font-weight:700; color:var(--primary-navy); margin-bottom:4px;">Preview &amp; Validate Dataset</h2>
+          <p style="font-size:0.875rem; color:var(--text-muted);">Review detected data, validation results and column mappings before running fraud analysis.</p>
+        </div>
+
+        <div class="preview-summary-card">
+          <div class="preview-meta-row">
+            <div class="file-info-badge">
+              <div class="file-icon-square">&#x1F4CA;</div>
+              <div>
+                <div class="file-info-name" id="preview-filename">filename.csv</div>
+                <div class="file-info-sub" id="preview-filesize">0 KB</div>
+              </div>
+            </div>
+            <div class="stats-badges-group">
+              <div class="stat-chip" id="preview-rows">0 rows</div>
+              <div class="stat-chip" id="preview-cols">0 columns</div>
+            </div>
+          </div>
+
+          <div id="validation-banner-container"></div>
+
+          <div id="column-mapping-card" class="schema-info-card" style="display:none; margin-bottom:20px;">
+            <div class="schema-info-header" style="margin-bottom:4px;">
+              <div class="schema-info-title">
+                <span>🔀</span> Column Mapping — Map CSV Headers to Application Fields
+              </div>
+              <span class="brand-badge" style="background:#e0f2fe; color:var(--accent-blue); font-size:0.75rem;">Auto-detected where possible</span>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px;">
+              Review auto-detected mappings (green border) and correct any that are wrong. Required fields marked <strong style="color:#dc2626;">*</strong> must be mapped to continue. Optional fields can be left unmapped.
+            </div>
+            <div id="column-mapping-fields"></div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="font-weight:700; font-size:0.95rem; color:var(--primary-navy);">Data Preview (First 20 Records)</div>
+            <span style="font-size:0.8rem; color:var(--text-muted);">Inspect values prior to committing</span>
+          </div>
+
+          <div class="preview-table-container">
+            <table class="data-table">
+              <thead id="preview-table-thead"></thead>
+              <tbody id="preview-table-tbody"></tbody>
+            </table>
+          </div>
+
+          <!-- Analysis running overlay (shown after confirm click, before dashboard) -->
+          <div id="analysis-running-card" style="display:none; margin-top:24px; padding:24px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:var(--radius-md); text-align:center;">
+            <div style="font-size:2rem; margin-bottom:10px;">&#x23F3;</div>
+            <div style="font-weight:700; color:var(--accent-blue); font-size:1.05rem; margin-bottom:6px;">
+              Running Fraud Risk Analysis&hellip;
+            </div>
+            <div style="font-size:0.875rem; color:var(--text-muted); margin-bottom:14px;">
+              Evaluating transactions against 5 rule-based detection algorithms and computing risk scores.
+            </div>
+            <div style="height:6px; background:#e2e8f0; border-radius:4px; overflow:hidden; max-width:420px; margin:0 auto;">
+              <div style="width:100%; height:100%; background:var(--accent-blue); animation: progressAnim 1.5s infinite linear;"></div>
+            </div>
+          </div>
+
+          <div id="preview-action-bar" style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px;">
+            <button type="button" id="btn-cancel-preview" class="btn btn-secondary">
+              &#x2190; Back to Upload
+            </button>
+            <button type="button" id="btn-confirm-preview" class="btn btn-primary">
+              Confirm &amp; Run Fraud Analysis &#x26A1;
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       Application Workspace Sidebar (Displayed after analysis)
+  ===================================================================== -->
+  <aside class="app-sidebar" style="display:none;">
     <div class="brand-header">
       <div class="brand-title">
-        <span>🛡️ FraudMonitor</span>
-        <span class="brand-badge">Academic</span>
+        <span>&#x1F6E1;&#xFE0F; FraudMonitor</span>
+        <span class="brand-badge">v1.0</span>
       </div>
       <div class="brand-subtitle">Rule-Based Transaction Risk Engine</div>
-      <div class="synthetic-pill">⚠️ Synthetic Data Only</div>
+      <div class="synthetic-pill">&#x26A0;&#xFE0F; Transaction Monitor</div>
     </div>
     <ul class="nav-links">
-      <li class="nav-item active">
-        <a href="/"><span>📊</span> Overview Dashboard</a>
+      <li class="nav-item active" id="nav-overview">
+        <a href="#" onclick="handleOverviewNavClick(event)"><span>&#x1F4CA;</span> Overview Dashboard</a>
       </li>
       <li class="nav-item">
-        <a href="/transactions"><span>💳</span> Transactions</a>
+        <a href="/transactions"><span>&#x1F4B3;</span> Transactions</a>
       </li>
       <li class="nav-item">
-        <a href="/alerts"><span>🚨</span> Alerts Investigation</a>
+        <a href="/alerts"><span>&#x1F6A8;</span> Alerts Investigation</a>
       </li>
       <li class="nav-item">
-        <a href="/rules"><span>⚖️</span> Detection Rules</a>
+        <a href="/rules"><span>&#x2696;&#xFE0F;</span> Detection Rules</a>
       </li>
       <li class="nav-item">
-        <a href="/customers"><span>👥</span> Customer Directory</a>
+        <a href="/customers"><span>&#x1F465;</span> Customer Directory</a>
       </li>
     </ul>
     <div class="sidebar-footer">
-      <div>Final Year CS Engineering Project</div>
-      <div style="margin-top:4px; color:var(--text-light); font-size:0.7rem;">Python 3.13 &bull; FastAPI &bull; MySQL</div>
+      <div>Banking Risk Management System</div>
+      <div style="margin-top:4px; color:var(--text-light); font-size:0.7rem;">Deterministic &bull; Explainable &bull; Fast</div>
     </div>
   </aside>
 
-  <!-- Main Content Area -->
-  <div class="main-wrapper">
+  <!-- =====================================================================
+       Application Main Dashboard Content (Displayed after analysis)
+  ===================================================================== -->
+  <div class="main-wrapper" style="display:none;">
     <header class="topbar">
-      <h1 class="page-title">Executive Transaction & Risk Overview</h1>
+      <div>
+        <h1 class="page-title">Executive Transaction &amp; Risk Overview</h1>
+      </div>
       <div class="topbar-actions">
+        <div id="active-dataset-badge" class="dataset-badge">
+          <span>&#x1F4C1;</span> <span>Active Dataset</span>
+        </div>
+        <button id="btn-switch-dataset" class="btn btn-secondary btn-sm" title="Switch or Upload Dataset">
+          <span>&#x1F504;</span> Switch / Upload Dataset
+        </button>
         <select id="filter-days" class="filter-select" title="Lookback Days">
           <option value="7">Last 7 Days</option>
           <option value="14">Last 14 Days</option>
-          <option value="30" selected>Last 30 Days</option>
+          <option value="30">Last 30 Days</option>
           <option value="90">Last 90 Days</option>
+          <option value="0">All Transactions</option>
         </select>
-        <button id="btn-batch-eval" class="btn btn-primary">
-          <span>⚡</span> Run Full Evaluation
+        <button id="btn-batch-eval" class="btn btn-primary btn-sm">
+          <span>&#x26A1;</span> Re-Evaluate All
         </button>
       </div>
     </header>
 
     <main class="content-container">
-      <!-- KPI Metrics Cards Grid -->
       <section class="kpi-grid">
         <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-label">Total Transactions</span>
-            <span class="kpi-icon">💳</span>
-          </div>
+          <div class="kpi-header"><span class="kpi-label">Total Transactions</span><span class="kpi-icon">&#x1F4B3;</span></div>
           <div class="kpi-value" id="kpi-total-txns">-</div>
-          <div class="kpi-meta">Database transaction stream</div>
+          <div class="kpi-meta">Active dataset stream</div>
         </div>
-
         <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-label">Flagged Suspicious</span>
-            <span class="kpi-icon">🚩</span>
-          </div>
+          <div class="kpi-header"><span class="kpi-label">Flagged Suspicious</span><span class="kpi-icon">&#x1F6A9;</span></div>
           <div class="kpi-value" id="kpi-flagged-txns" style="color: var(--risk-critical);">-</div>
           <div class="kpi-meta" id="kpi-flag-rate">0% Flag Rate</div>
         </div>
-
         <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-label">Open Alerts</span>
-            <span class="kpi-icon">🚨</span>
-          </div>
+          <div class="kpi-header"><span class="kpi-label">Open Alerts</span><span class="kpi-icon">&#x1F6A8;</span></div>
           <div class="kpi-value" id="kpi-open-alerts" style="color: var(--status-open);">-</div>
           <div class="kpi-meta">Pending investigation queue</div>
         </div>
-
         <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-label">High / Critical Alerts</span>
-            <span class="kpi-icon">🔥</span>
-          </div>
+          <div class="kpi-header"><span class="kpi-label">High / Critical Alerts</span><span class="kpi-icon">&#x1F525;</span></div>
           <div class="kpi-value" id="kpi-high-critical" style="color: var(--risk-high);">-</div>
           <div class="kpi-meta">Score &ge; 60 indicator</div>
         </div>
-
         <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-label">Total Monitored Volume</span>
-            <span class="kpi-icon">💰</span>
-          </div>
+          <div class="kpi-header"><span class="kpi-label">Total Monitored Volume</span><span class="kpi-icon">&#x1F4B0;</span></div>
           <div class="kpi-value" id="kpi-monitored-vol">-</div>
           <div class="kpi-meta" id="kpi-flagged-vol">$0.00 Flagged</div>
         </div>
       </section>
 
-      <!-- Charts Grid 1: Daily Trends + Risk Distribution -->
       <section class="charts-grid">
         <div class="chart-card chart-span-8">
-          <div class="chart-header">
-            <div>
-              <div class="chart-title">Daily Transaction Volume & Flagged Alerts Trend</div>
-              <div class="chart-desc">Time-series breakdown of overall vs suspicious transaction volumes</div>
-            </div>
-          </div>
-          <div class="chart-canvas-wrapper">
-            <canvas id="chart-daily-trends"></canvas>
-          </div>
+          <div class="chart-header"><div><div class="chart-title">Daily Transaction Volume &amp; Flagged Alerts Trend</div><div class="chart-desc">Time-series breakdown of overall vs suspicious transaction volumes</div></div></div>
+          <div class="chart-canvas-wrapper"><canvas id="chart-daily-trends"></canvas></div>
         </div>
-
         <div class="chart-card chart-span-4">
-          <div class="chart-header">
-            <div>
-              <div class="chart-title">Risk Band Distribution</div>
-              <div class="chart-desc">Breakdown across Low, Medium, High & Critical</div>
-            </div>
-          </div>
-          <div class="chart-canvas-wrapper">
-            <canvas id="chart-risk-dist"></canvas>
-          </div>
+          <div class="chart-header"><div><div class="chart-title">Risk Band Distribution</div><div class="chart-desc">Breakdown across Low, Medium, High &amp; Critical</div></div></div>
+          <div class="chart-canvas-wrapper"><canvas id="chart-risk-dist"></canvas></div>
         </div>
       </section>
 
-      <!-- Charts Grid 2: Most Frequently Triggered Rules + Channel Breakdown -->
       <section class="charts-grid">
         <div class="chart-card chart-span-8">
-          <div class="chart-header">
-            <div>
-              <div class="chart-title">Detection Rule Effectiveness & Trigger Frequency</div>
-              <div class="chart-desc">Ranking of fraud detection rules by trigger count across evaluated transactions</div>
-            </div>
-          </div>
-          <div class="chart-canvas-wrapper">
-            <canvas id="chart-rule-freq"></canvas>
-          </div>
+          <div class="chart-header"><div><div class="chart-title">Detection Rule Effectiveness &amp; Trigger Frequency</div><div class="chart-desc">Ranking of fraud detection rules by trigger count across evaluated transactions</div></div></div>
+          <div class="chart-canvas-wrapper"><canvas id="chart-rule-freq"></canvas></div>
         </div>
-
         <div class="chart-card chart-span-4">
-          <div class="chart-header">
-            <div>
-              <div class="chart-title">Transaction Channel Breakdown</div>
-              <div class="chart-desc">Transactions volume across banking touchpoints</div>
-            </div>
-          </div>
-          <div class="chart-canvas-wrapper">
-            <canvas id="chart-channel-dist"></canvas>
-          </div>
+          <div class="chart-header"><div><div class="chart-title">Transaction Channel Breakdown</div><div class="chart-desc">Transactions volume across banking touchpoints</div></div></div>
+          <div class="chart-canvas-wrapper"><canvas id="chart-channel-dist"></canvas></div>
         </div>
       </section>
 
-      <!-- Recent Alerts Table -->
       <section class="data-card">
         <div class="data-card-header">
           <div>
@@ -175,17 +316,12 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Alert Reference</th>
-                <th>Customer</th>
-                <th>Amount</th>
-                <th>Risk Indicator</th>
-                <th>Status</th>
-                <th>Timestamp</th>
-                <th>Action</th>
+                <th>Alert Reference</th><th>Customer</th><th>Amount</th>
+                <th>Risk Indicator</th><th>Status</th><th>Timestamp</th><th>Action</th>
               </tr>
             </thead>
             <tbody id="recent-alerts-tbody">
-              <tr><td colspan="7" style="text-align:center; padding: 24px;">Loading alerts...</td></tr>
+              <tr><td colspan="7" style="text-align:center; padding:24px;">Loading alerts...</td></tr>
             </tbody>
           </table>
         </div>
@@ -193,8 +329,26 @@
     </main>
   </div>
 
+  <!-- Dataset Switcher Modal -->
+  <div id="modal-dataset-switcher" class="modal-backdrop" style="display:none;">
+    <div class="dataset-modal-card">
+      <div class="modal-header">
+        <div style="font-weight:700; font-size:1.1rem; color:var(--primary-navy);">Select or Switch Active Dataset</div>
+        <button id="btn-close-dataset-modal" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-dataset-list">
+        <div style="text-align:center; padding:20px;">Loading datasets...</div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-modal-upload-new" class="btn btn-primary btn-sm"><span>&#x2795;</span> Upload New Dataset</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('modal-dataset-switcher').style.display='none'">Close</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast-container" class="toast-container"></div>
-  <script src="/static/js/api.js?v=2"></script>
-  <script src="/static/js/dashboard.js?v=2"></script>
+  <script src="/static/js/api.js?v=6"></script>
+  <script src="/static/js/dashboard.js?v=6"></script>
+  <script src="/static/js/workflow.js?v=6"></script>
 </body>
 </html>

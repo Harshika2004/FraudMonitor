@@ -23,6 +23,7 @@ from backend.app.api.routes_alerts import router as alerts_router
 from backend.app.api.routes_rules import router as rules_router
 from backend.app.api.routes_analytics import router as analytics_router
 from backend.app.api.routes_customers import router as customers_router
+from backend.app.api.routes_datasets import router as datasets_router
 
 # Configure logging
 logging.basicConfig(
@@ -76,6 +77,7 @@ app.include_router(alerts_router, prefix=api_prefix)
 app.include_router(rules_router, prefix=api_prefix)
 app.include_router(analytics_router, prefix=api_prefix)
 app.include_router(customers_router, prefix=api_prefix)
+app.include_router(datasets_router, prefix=api_prefix)
 
 # Mount frontend static files
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"

@@ -31,6 +31,7 @@ def list_transactions(
     search: Optional[str] = Query(None, description="Search transaction ref, account, customer, or city"),
     sort_by: str = Query("timestamp", description="Sort column (timestamp, amount, transaction_id)"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order"),
+    dataset_id: Optional[int] = Query(None, description="Dataset ID to filter"),
     db: Session = Depends(get_db)
 ):
     """Retrieve paginated transactions with multi-criteria filtering and sorting."""
@@ -49,7 +50,8 @@ def list_transactions(
         risk_category=risk_category,
         search=search,
         sort_by=sort_by,
-        sort_order=sort_order
+        sort_order=sort_order,
+        dataset_id=dataset_id
     )
     return {
         "total": total,
@@ -100,15 +102,15 @@ def get_transaction(transaction_id: int, db: Session = Depends(get_db)):
             "account_id": acct.account_id,
             "account_number": acct.account_number,
             "account_type": acct.account_type,
-            "current_balance": float(acct.current_balance),
+            "current_balance": float(acct.current_balance) if acct.current_balance is not None else None,
             "status": acct.status
         },
         "customer": {
-            "customer_id": cust.customer_id,
-            "customer_ref": cust.customer_ref,
-            "name": f"{cust.first_name} {cust.last_name}",
-            "email": cust.email,
-            "risk_segment": cust.risk_segment
+            "customer_id": cust.customer_id if cust else None,
+            "customer_ref": cust.customer_ref if cust else (acct.customer_ref or txn.customer_ref or "Not provided"),
+            "name": f"{cust.first_name} {cust.last_name}".strip() if cust else (acct.customer_name or txn.customer_name or "Not provided"),
+            "email": cust.email if cust else (acct.email or txn.email or "Not provided"),
+            "risk_segment": cust.risk_segment if cust else "LOW"
         },
         "alert": {
             "alert_id": alert.alert_id,
@@ -164,7 +166,8 @@ def evaluate_single_transaction(
 def evaluate_batch(
     only_unevaluated: bool = Query(True, description="Only evaluate uninspected transactions"),
     limit: Optional[int] = Query(None, ge=1, description="Maximum transactions to evaluate in batch (omit or null to evaluate all)"),
+    dataset_id: Optional[int] = Query(None, description="Dataset ID to scope evaluation (defaults to active dataset)"),
     db: Session = Depends(get_db)
 ):
     """Batch-evaluates transactions against all enabled detection rules."""
-    return TransactionService.batch_evaluate(db, only_unevaluated=only_unevaluated, limit=limit)
+    return TransactionService.batch_evaluate(db, only_unevaluated=only_unevaluated, limit=limit, dataset_id=dataset_id)

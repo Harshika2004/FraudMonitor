@@ -1,20 +1,23 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transactions | Banking Transaction Monitoring</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=2">
+  <link rel="stylesheet" href="/static/css/style.css?v=6">
+<script>
+  (function(){if(!sessionStorage.getItem('sessionDatasetId')){window.location.replace('/');}})();
+</script>
 </head>
 <body>
   <aside class="app-sidebar">
     <div class="brand-header">
       <div class="brand-title">
         <span>🛡️ FraudMonitor</span>
-        <span class="brand-badge">Academic</span>
+        <span class="brand-badge">v1.0</span>
       </div>
       <div class="brand-subtitle">Rule-Based Transaction Risk Engine</div>
-      <div class="synthetic-pill">⚠️ Synthetic Data Only</div>
+      <div class="synthetic-pill">&#x26A0;&#xFE0F; Transaction Monitor</div>
     </div>
     <ul class="nav-links">
       <li class="nav-item">
@@ -34,7 +37,7 @@
       </li>
     </ul>
     <div class="sidebar-footer">
-      <div>Final Year CS Engineering Project</div>
+      <div>Banking Risk Management System</div><div style="margin-top:4px; color:var(--text-light); font-size:0.7rem;">Deterministic &bull; Explainable &bull; Fast</div>
     </div>
   </aside>
 
@@ -242,7 +245,8 @@
   </div>
 
   <div id="toast-container" class="toast-container"></div>
-  <script src="/static/js/api.js?v=2"></script>
-  <script src="/static/js/transactions.js?v=2"></script>
+  <script src="/static/js/api.js?v=6"></script>
+  <script src="/static/js/dataset_nav.js?v=6"></script>
+  <script src="/static/js/transactions.js?v=6"></script>
 </body>
 </html>

@@ -62,6 +62,9 @@ async function loadAlerts(page = 1) {
     sort_order: 'desc'
   };
 
+  const datasetId = sessionStorage.getItem('sessionDatasetId');
+  if (datasetId) params.dataset_id = parseInt(datasetId);
+
   try {
     const data = await ApiClient.get('/alerts', params);
     renderAlertsTable(data.items);
@@ -82,7 +85,7 @@ function renderAlertsTable(items) {
     <tr>
       <td><strong>${alert.alert_ref}</strong></td>
       <td>
-        <div><strong>${alert.customer_name || 'Synthetic Customer'}</strong></div>
+        <div><strong>${alert.customer_name || 'Not provided'}</strong></div>
         <div style="font-size:0.75rem; color:var(--text-muted);">${alert.account_number || ''}</div>
       </td>
       <td>
