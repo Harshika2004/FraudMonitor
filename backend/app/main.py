@@ -35,6 +35,22 @@ logger = logging.getLogger("fraud_monitoring")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"{settings.APP_NAME} starting up in {settings.APP_ENV} mode.")
+    # Auto-initialize database tables and default rules if database is empty/new
+    try:
+        from backend.app.database.base import Base
+        from backend.app.database.connection import engine, SessionLocal
+        import backend.app.models
+        if engine is not None:
+            Base.metadata.create_all(bind=engine)
+            db = SessionLocal()
+            try:
+                from database.seed_data import seed_rules_and_bands
+                seed_rules_and_bands(db)
+                logger.info("Database schema and default fraud rules verified.")
+            finally:
+                db.close()
+    except Exception as e:
+        logger.warning(f"Database auto-initialization check skipped/failed: {e}")
     yield
 
 app = FastAPI(

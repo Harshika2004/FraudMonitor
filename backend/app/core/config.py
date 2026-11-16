@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     HIGH_RISK_MAX: int = 79
     CRITICAL_RISK_MIN: int = 80
 
-    # CORS
+    # CORS — set to "*" via env var on Render, or list specific origins
     CORS_ORIGINS: str = "http://localhost:8000,http://127.0.0.1:8000,http://localhost:5500,http://127.0.0.1:5500"
 
     model_config = {
@@ -45,7 +45,11 @@ class Settings(BaseSettings):
     }
 
     def get_cors_origins(self) -> List[str]:
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+        origins = [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+        # Allow wildcard — useful for Render / production when set via env var
+        if "*" in origins:
+            return ["*"]
+        return origins
 
     def get_database_url(self) -> str:
         if self.DB_URL:

@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: fraudmonitor
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: DB_URL
+        value: sqlite:////data/banking_fraud.db
+      - key: CORS_ORIGINS
+        value: "*"
+    disk:
+      name: fraudmonitor-data
+      mountPath: /data
+      sizeGB: 1
